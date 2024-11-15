@@ -110,7 +110,7 @@ class SST2Dataset(Dataset):
         self.load_dataset(subtask, **kwargs)
 
     def load_dataset(self, path, **kwargs):
-        d = load_dataset('~/lt/glue', 'sst2')
+        d = load_dataset('~/lt/glue.py', 'sst2')
         train_d = d["train"]
         validation_d = d["validation"]
 
