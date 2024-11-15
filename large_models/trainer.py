@@ -896,8 +896,8 @@ class OurTrainer(Trainer):
                         if args.mode in ['lora', 'prefix', 'prompt']:
                             # print(args.mode)
                             # print(param.data.shape)
-                            w_shape = reshape_matrix(param.data.numel())
-                            param.data = param.data.reshape(w_shape)
+                            # w_shape = reshape_matrix(param.data.numel())
+                            # param.data = param.data.reshape(w_shape)
                             w_shape = param.data.shape
                             print("param data size is: ",w_shape)
                             # U, V = fast_svd_method_v2(w_shape=w_shape, device=param.device, dtype=param.data.dtype, rank=args.gauss_rank)
