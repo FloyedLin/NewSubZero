@@ -898,7 +898,7 @@ class OurTrainer(Trainer):
                             # print(param.data.shape)
                             # w_shape = reshape_matrix(param.data.numel())
                             w_shape = param.data.shape
-                            print(w_shape)
+                            print("param data size is: ",w_shape)
                             # U, V = fast_svd_method_v2(w_shape=w_shape, device=param.device, dtype=param.data.dtype, rank=args.gauss_rank)
                             U, V = get_orthogonal_matrix(weights=param, rank=args.gauss_rank)
                         else:
@@ -990,6 +990,7 @@ class OurTrainer(Trainer):
             if len(torch.squeeze(param.data).shape) == 2:    
                 z0 = torch.normal(mean=0, std=1, size=(args.gauss_rank, args.gauss_rank), device=param.data.device, dtype=param.data.dtype)
                 # z = U @ z0 @ V * math.sqrt(param.data.numel() / z0.numel())
+                print("z0 shape is",z0.shape)
                 z = (U @ z0 @ V * math.sqrt(param.data.numel() / z0.numel())).view(param.data.shape).to(param.data.dtype)
 
             else:
