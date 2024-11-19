@@ -894,7 +894,18 @@ class OurTrainer(Trainer):
                     if self.state.global_step % args.update_interval == 0:
                             # print(args.mode)
                         self.zo_step(model, inputs)
-                        logger.info("step is: ", self.state.global_step, "new grad is: ",self.projected_grad)
+                        logger.info("step is: ", self.state.global_step, "new projected grad is: ",self.projected_grad)
+
+
+                        torch.manual_seed(self.zo_random_seed)
+                        for name, param in self.named_parameters_to_optim:
+                            # Resample z
+                            z = torch.normal(mean=0, std=1, size=param.data.size(), device=param.data.device,
+                                            dtype=param.data.dtype)
+
+                            param.grad = self.projected_grad * z              
+
+
                         if args.mode in ['lora', 'prefix', 'prompt']:
                             # print(args.mode)
                             # print(param.data.shape)
@@ -903,11 +914,11 @@ class OurTrainer(Trainer):
                             w_shape = param.data.shape
                             logger.info("param data size is: ",w_shape)
                             # U, V = fast_svd_method_v2(w_shape=w_shape, device=param.device, dtype=param.data.dtype, rank=args.gauss_rank)
-                            param_grad = self.projected_grad
+                            param_grad = self.grad
                             U, V = get_orthogonal_matrix(weights=param_grad, rank=args.gauss_rank)
                         else:
                             # U, V = fast_svd_method_v2(w_shape=param.data.shape, device=param.device, dtype=param.data.dtype, rank=args.gauss_rank)
-                            param_grad = self.projected_grad
+                            param_grad = self.grad
                             U, V = get_orthogonal_matrix(weights=param_grad, rank=args.gauss_rank)
 
                         p_state['U'] = U
@@ -1226,14 +1237,23 @@ def reshape_matrix(integer):
 def get_orthogonal_matrix(weights, rank, type='full'):
     module_params = weights
 
-    if module_params.dtype != torch.float:
+    if module_params.data.dtype != torch.float:
         float_data = False
-        original_type = module_params.dtype
-        original_device = module_params.device
-        matrix = module_params.float()
+        original_type = module_params.data.dtype
+        original_device = module_params.data.device
+        matrix = module_params.data.float()
     else:
         float_data = True
-        matrix = module_params
+        matrix = module_params.data
+
+    # if weights:
+    #     float_data = False
+    #     original_type = module_params.data.dtype
+    #     original_device = module_params.data.device
+    #     matrix = module_params.data.float()
+    # else:
+    #     float_data = True
+    #     matrix = module_params.data
 
     U, s, Vh = torch.linalg.svd(matrix, full_matrices = False)
 
