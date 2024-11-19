@@ -866,11 +866,55 @@ class OurTrainer(Trainer):
                 self.zo_perturb_parameters(scaling_factor=1)
 
         # No gradient accumulation support
+        assert self.args.gradient_accumulation_steps == 1
+
+        return loss1
+
+    @torch.no_grad()
+    def new_zo_step(self, model, inputs):
+        """
+        Estimate gradient by MeZO. Return the loss from f(theta + z)
+        """
+        args = self.args
+
+        # What parameters to optimize
+        self.named_parameters_to_optim = []
+  
+        for name, param in model.named_parameters():
+            if param.requires_grad:
+                self.named_parameters_to_optim.append((name, param))
+                # # TODO avoid init the memory for grad.
+                # param.grad = torch.zeros_like(param.data)
+                # param.grad = None  # Make sure the grad is empty and will not be updated.
+
+        # Sample the random seed for sampling z
+        self.zo_random_seed = np.random.randint(1000000000)
+
+        # First function evaluation
+        self.zo_perturb_parameters(scaling_factor=1)
+        loss1 = self.zo_forward(model, inputs)
+
+        # Second function evaluation
+        assert args.q == 1, "only support q=1 for the memory efficiency. If you want to implement q>1, need to store random seeds to save memory. In addition, we need to set different random seed for different z in the q-loop."
+        for _ in range(args.q):  # TODO shall we change the seed?
+            if self.args.perturbation_mode == "one_side":
+                self.zo_perturb_parameters(scaling_factor=-1)
+                loss2 = self.zo_forward(model, inputs)
+                self.projected_grad = ((loss1 - loss2) / self.args.zo_eps).item()
+            else:  # two side perturbation
+                self.zo_perturb_parameters(scaling_factor=-2)
+                loss2 = self.zo_forward(model, inputs)
+                self.projected_grad = ((loss1 - loss2) / (2 * self.args.zo_eps)).item()
+
+                # Reset model back to its parameters at start of step
+                self.zo_perturb_parameters(scaling_factor=1)
+
+        # No gradient accumulation support
         # assert self.args.gradient_accumulation_steps == 1
 
         return loss1
 
-    
+
     @torch.no_grad()
     def zo_subspace_step(self, model, inputs):
         """
@@ -879,7 +923,8 @@ class OurTrainer(Trainer):
         args = self.args
                 
         # What parameters to optimize
-        self.named_parameters_to_optim = []
+        # self.named_parameters_to_optim = []
+        self.named_parameters_to_optim_new = []
         for name, param in model.named_parameters():
             if param.requires_grad:
 
@@ -893,7 +938,7 @@ class OurTrainer(Trainer):
                         
                     if self.state.global_step % args.update_interval == 0:
                             # print(args.mode)
-                        self.zo_step(model, inputs)
+                        self.new_zo_step(model, inputs)
                         print("step is: ", self.state.global_step, "new projected grad is: ",self.projected_grad)
 
 
@@ -928,9 +973,9 @@ class OurTrainer(Trainer):
                     V = p_state['V']  
                     print("U and V shape is",U.shape, V.shape)
                     
-                    self.named_parameters_to_optim.append((name, param, U, V))
+                    self.named_parameters_to_optim_new.append((name, param, U, V))
                 else:
-                    self.named_parameters_to_optim.append((name, param, torch.Tensor([1.]), torch.Tensor([1.])))
+                    self.named_parameters_to_optim_new.append((name, param, torch.Tensor([1.]), torch.Tensor([1.])))
                     # # TODO avoid init the memory for grad.
                     # param.grad = torch.zeros_like(param.data)
                     # param.grad = None  # Make sure the grad is empty and will not be updated.
@@ -938,6 +983,7 @@ class OurTrainer(Trainer):
                 # param.grad = torch.zeros_like(param.data)
                 param.grad = None  # Make sure the grad is empty and will not be updated.
 
+        self.named_parameters_to_optim = self.named_parameters_to_optim_new
         # Sample the random seed for sampling z
         # torch.cuda.empty_cache()
         self.zo_random_seed = np.random.randint(1000000000)
