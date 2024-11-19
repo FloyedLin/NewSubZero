@@ -926,7 +926,7 @@ class OurTrainer(Trainer):
                         
                     U = p_state['U']
                     V = p_state['V']  
-                    # print("U and V shape is",U.shape, V.shape)
+                    print("U and V shape is",U.shape, V.shape)
                     
                     self.named_parameters_to_optim.append((name, param, U, V))
                 else:
@@ -942,7 +942,7 @@ class OurTrainer(Trainer):
         # torch.cuda.empty_cache()
         self.zo_random_seed = np.random.randint(1000000000)
 
-        print("named parameters to optim is: ",self.named_parameters_to_optim)
+        # print("named parameters to optim is: ",self.named_parameters_to_optim)
 
         # First function evaluation
         self.zo_subspace_perturb_parameters(scaling_factor=1)
