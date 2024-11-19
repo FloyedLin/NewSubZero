@@ -894,7 +894,7 @@ class OurTrainer(Trainer):
                     if self.state.global_step % args.update_interval == 0:
                             # print(args.mode)
                         self.zo_step(model, inputs)
-                        logger.info("step is: ", self.state.global_step, "new projected grad is: ",self.projected_grad)
+                        print("step is: ", self.state.global_step, "new projected grad is: ",self.projected_grad)
 
 
                         torch.manual_seed(self.zo_random_seed)
@@ -912,7 +912,7 @@ class OurTrainer(Trainer):
                             # w_shape = reshape_matrix(param.data.numel())
                             # param.data = param.data.reshape(w_shape)
                             w_shape = param.data.shape
-                            logger.info("param data size is: ",w_shape)
+                            print("param data size is: ",w_shape)
                             # U, V = fast_svd_method_v2(w_shape=w_shape, device=param.device, dtype=param.data.dtype, rank=args.gauss_rank)
                             param_grad = param.grad
                             U, V = get_orthogonal_matrix(weights=param_grad, rank=args.gauss_rank)
