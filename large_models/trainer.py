@@ -893,7 +893,7 @@ class OurTrainer(Trainer):
                         
                     if self.state.global_step % args.update_interval == 0:
                             # print(args.mode)
-                        self.zo_step(self, model, inputs)
+                        self.zo_step(model, inputs)
                         logger.info("step is: ", self.state.global_step, "new grad is: ",self.projected_grad)
                         if args.mode in ['lora', 'prefix', 'prompt']:
                             # print(args.mode)
