@@ -866,7 +866,7 @@ class OurTrainer(Trainer):
                 self.zo_perturb_parameters(scaling_factor=1)
 
         # No gradient accumulation support
-        assert self.args.gradient_accumulation_steps == 1
+        # assert self.args.gradient_accumulation_steps == 1
 
         return loss1
 
@@ -893,18 +893,21 @@ class OurTrainer(Trainer):
                         
                     if self.state.global_step % args.update_interval == 0:
                             # print(args.mode)
+                        self.zo_step(self, model, inputs)
                         if args.mode in ['lora', 'prefix', 'prompt']:
                             # print(args.mode)
                             # print(param.data.shape)
                             # w_shape = reshape_matrix(param.data.numel())
                             # param.data = param.data.reshape(w_shape)
                             w_shape = param.data.shape
-                            print("param data size is: ",w_shape)
+                            logger.info("param data size is: ",w_shape)
                             # U, V = fast_svd_method_v2(w_shape=w_shape, device=param.device, dtype=param.data.dtype, rank=args.gauss_rank)
-                            U, V = get_orthogonal_matrix(weights=param, rank=args.gauss_rank)
+                            param_grad = self.projected_grad
+                            U, V = get_orthogonal_matrix(weights=param_grad, rank=args.gauss_rank)
                         else:
                             # U, V = fast_svd_method_v2(w_shape=param.data.shape, device=param.device, dtype=param.data.dtype, rank=args.gauss_rank)
-                            U, V = get_orthogonal_matrix(weights=param, rank=args.gauss_rank)
+                            param_grad = self.projected_grad
+                            U, V = get_orthogonal_matrix(weights=param_grad, rank=args.gauss_rank)
 
                         p_state['U'] = U
                         p_state['V'] = V
