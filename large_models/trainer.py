@@ -914,11 +914,11 @@ class OurTrainer(Trainer):
                             w_shape = param.data.shape
                             logger.info("param data size is: ",w_shape)
                             # U, V = fast_svd_method_v2(w_shape=w_shape, device=param.device, dtype=param.data.dtype, rank=args.gauss_rank)
-                            param_grad = self.grad
+                            param_grad = param.grad
                             U, V = get_orthogonal_matrix(weights=param_grad, rank=args.gauss_rank)
                         else:
                             # U, V = fast_svd_method_v2(w_shape=param.data.shape, device=param.device, dtype=param.data.dtype, rank=args.gauss_rank)
-                            param_grad = self.grad
+                            param_grad = param.grad
                             U, V = get_orthogonal_matrix(weights=param_grad, rank=args.gauss_rank)
 
                         p_state['U'] = U
