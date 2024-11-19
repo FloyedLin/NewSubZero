@@ -942,6 +942,8 @@ class OurTrainer(Trainer):
         # torch.cuda.empty_cache()
         self.zo_random_seed = np.random.randint(1000000000)
 
+        print("named parameters to optim is: ",self.named_parameters_to_optim)
+
         # First function evaluation
         self.zo_subspace_perturb_parameters(scaling_factor=1)
         loss1 = self.zo_forward(model, inputs)
