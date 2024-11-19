@@ -1226,14 +1226,14 @@ def reshape_matrix(integer):
 def get_orthogonal_matrix(weights, rank, type='full'):
     module_params = weights
 
-    if module_params.data.dtype != torch.float:
+    if module_params.dtype != torch.float:
         float_data = False
-        original_type = module_params.data.dtype
-        original_device = module_params.data.device
-        matrix = module_params.data.float()
+        original_type = module_params.dtype
+        original_device = module_params.device
+        matrix = module_params.float()
     else:
         float_data = True
-        matrix = module_params.data
+        matrix = module_params
 
     U, s, Vh = torch.linalg.svd(matrix, full_matrices = False)
 
