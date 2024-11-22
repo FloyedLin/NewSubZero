@@ -143,8 +143,8 @@ class OurTrainer(Trainer):
         self._train_batch_size = batch_size
         print('first batchsize', batch_size)
         # Data loader and number of training steps
-        
-        print(f"训练数据集的大小: {len(self.train_dataset)}")
+
+        print(f"训练数据集: {self.train_dataset}")
 
         train_dataloader = self.get_train_dataloader()
         eval_dataloader = self.get_eval_dataloader()  # ----newly-added
