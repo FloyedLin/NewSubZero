@@ -492,6 +492,9 @@ class Framework:
 
         with count_time("Tokenizing training samples"):
             train_dataset = HFDataset(_convert(train_samples))
+
+            print(f"Train dataset: {train_dataset}")
+
             eval_dataset = HFDataset(_convert(eval_samples))
             dev_dataset = HFDataset(_convert(dev_samples))
 
