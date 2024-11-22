@@ -251,9 +251,13 @@ class CBDataset(Dataset):
         train_set = d["train"]
         valid_set = d["validation"]
 
+        print('train_set', len(train_set))
+
         train_samples = [self.build_sample(example) for example in train_set]
         valid_samples = [self.build_sample(example) for example in valid_set]
         self.samples = {"train": train_samples, "valid": valid_samples}
+
+        print('train_samples', len(train_samples))
 
     def build_sample(self, example):
         sample = \
