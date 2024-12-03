@@ -935,8 +935,8 @@ class OurTrainer(Trainer):
 
                     gauss_rank = min(args.gauss_rank, min(param.data.size(0), param.data.size(1)))
 
-                    print("param data size is: ",w_shape)
-                    
+                    print("param data size is: ", param.data.shape)
+
                     if self.state.global_step == 0:
    
                         self.p_state[name] = {'U': torch.zeros(param.data.size(0), gauss_rank), 
