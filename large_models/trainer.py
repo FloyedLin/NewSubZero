@@ -1058,7 +1058,10 @@ class OurTrainer(Trainer):
         for name, param, U, V in self.named_parameters_to_optim:
             # Resample z
             if len(torch.squeeze(param.data).shape) == 2:    
-                z0 = torch.normal(mean=0, std=1, size=(args.gauss_rank, args.gauss_rank), device=param.data.device, dtype=param.data.dtype)
+
+                gauss_rank = max(args.gauss_rank, min(param.data.size(0), param.data.size(1)))
+
+                z0 = torch.normal(mean=0, std=1, size=(gauss_rank, gauss_rank), device=param.data.device, dtype=param.data.dtype)
                 # z = U @ z0 @ V * math.sqrt(param.data.numel() / z0.numel())
                 print("z0 shape is",z0.shape)
                 z = (U @ z0 @ V * math.sqrt(param.data.numel() / z0.numel())).view(param.data.shape).to(param.data.dtype)
