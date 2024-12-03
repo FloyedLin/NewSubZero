@@ -933,7 +933,7 @@ class OurTrainer(Trainer):
 
                 if len(torch.squeeze(param.data).shape) == 2:
 
-                    gauss_rank = max(args.gauss_rank, min(param.data.size(0), param.data.size(1)))
+                    gauss_rank = min(args.gauss_rank, min(param.data.size(0), param.data.size(1)))
 
                     if self.state.global_step == 0:
    
@@ -1059,7 +1059,7 @@ class OurTrainer(Trainer):
             # Resample z
             if len(torch.squeeze(param.data).shape) == 2:    
 
-                gauss_rank = max(args.gauss_rank, min(param.data.size(0), param.data.size(1)))
+                gauss_rank = min(args.gauss_rank, min(param.data.size(0), param.data.size(1)))
 
                 z0 = torch.normal(mean=0, std=1, size=(gauss_rank, gauss_rank), device=param.data.device, dtype=param.data.dtype)
                 # z = U @ z0 @ V * math.sqrt(param.data.numel() / z0.numel())
