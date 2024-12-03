@@ -935,6 +935,8 @@ class OurTrainer(Trainer):
 
                     gauss_rank = min(args.gauss_rank, min(param.data.size(0), param.data.size(1)))
 
+                    print("param data size is: ",w_shape)
+                    
                     if self.state.global_step == 0:
    
                         self.p_state[name] = {'U': torch.zeros(param.data.size(0), gauss_rank), 
@@ -963,7 +965,6 @@ class OurTrainer(Trainer):
                             # w_shape = reshape_matrix(param.data.numel())
                             # param.data = param.data.reshape(w_shape)
                             w_shape = param.data.shape
-                            print("param data size is: ",w_shape)
                             # U, V = fast_svd_method_v2(w_shape=w_shape, device=param.device, dtype=param.data.dtype, rank=args.gauss_rank)
                             param_grad = param.grad
                             U, V = get_orthogonal_matrix(weights=param_grad, rank=gauss_rank)
