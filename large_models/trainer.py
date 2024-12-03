@@ -144,7 +144,7 @@ class OurTrainer(Trainer):
         print('first batchsize', batch_size)
         # Data loader and number of training steps
 
-        print(f"训练数据集大小: {len(self.train_dataset)}")
+        # print(f"训练数据集大小: {len(self.train_dataset)}")
 
         train_dataloader = self.get_train_dataloader()
         eval_dataloader = self.get_eval_dataloader()  # ----newly-added
@@ -932,10 +932,13 @@ class OurTrainer(Trainer):
             if param.requires_grad:
 
                 if len(torch.squeeze(param.data).shape) == 2:
+
+                    gauss_rank = max(args.gauss_rank, min(param.data.size(0), param.data.size(1)))
+
                     if self.state.global_step == 0:
    
-                        self.p_state[name] = {'U': torch.zeros(param.data.size(0), args.gauss_rank), 
-                                                'V': torch.zeros(args.gauss_rank, param.data.size(1))}
+                        self.p_state[name] = {'U': torch.zeros(param.data.size(0), gauss_rank), 
+                                                'V': torch.zeros(gauss_rank, param.data.size(1))}
                   
                     p_state = self.p_state[name]          
                         
@@ -963,11 +966,11 @@ class OurTrainer(Trainer):
                             print("param data size is: ",w_shape)
                             # U, V = fast_svd_method_v2(w_shape=w_shape, device=param.device, dtype=param.data.dtype, rank=args.gauss_rank)
                             param_grad = param.grad
-                            U, V = get_orthogonal_matrix(weights=param_grad, rank=args.gauss_rank)
+                            U, V = get_orthogonal_matrix(weights=param_grad, rank=gauss_rank)
                         else:
                             # U, V = fast_svd_method_v2(w_shape=param.data.shape, device=param.device, dtype=param.data.dtype, rank=args.gauss_rank)
                             param_grad = param.grad
-                            U, V = get_orthogonal_matrix(weights=param_grad, rank=args.gauss_rank)
+                            U, V = get_orthogonal_matrix(weights=param_grad, rank=gauss_rank)
 
                         p_state['U'] = U
                         p_state['V'] = V
