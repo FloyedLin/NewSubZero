@@ -935,6 +935,7 @@ class OurTrainer(Trainer):
 
                     gauss_rank = min(args.gauss_rank, min(param.data.size(0), param.data.size(1)))
 
+                    print("gauss rank is: ", gauss_rank)
                     print("param name is ", name)
                     print("param data size is: ", param.data.shape)
 
@@ -965,7 +966,7 @@ class OurTrainer(Trainer):
                             # print(param.data.shape)
                             # w_shape = reshape_matrix(param.data.numel())
                             # param.data = param.data.reshape(w_shape)
-                            w_shape = param.data.shape
+                            # w_shape = param.data.shape
                             # U, V = fast_svd_method_v2(w_shape=w_shape, device=param.device, dtype=param.data.dtype, rank=args.gauss_rank)
                             param_grad = param.grad
                             U, V = get_orthogonal_matrix(weights=param_grad, rank=gauss_rank)
