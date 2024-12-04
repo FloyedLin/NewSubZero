@@ -935,6 +935,7 @@ class OurTrainer(Trainer):
 
                     gauss_rank = min(args.gauss_rank, min(param.data.size(0), param.data.size(1)))
 
+                    print("param name is ", name)
                     print("param data size is: ", param.data.shape)
 
                     if self.state.global_step == 0:
