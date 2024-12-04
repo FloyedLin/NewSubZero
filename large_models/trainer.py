@@ -925,6 +925,12 @@ class OurTrainer(Trainer):
         """
         args = self.args
                 
+        if self.state.global_step % args.update_interval == 0:
+            # print(args.mode)
+            self.new_zo_step(model, inputs)
+            print("step is: ", self.state.global_step, "new projected grad is: ",self.projected_grad)
+
+
         # What parameters to optimize
         # self.named_parameters_to_optim = []
         self.named_parameters_to_optim_new = []
@@ -946,20 +952,14 @@ class OurTrainer(Trainer):
                   
                     p_state = self.p_state[name]          
                         
+                    
                     if self.state.global_step % args.update_interval == 0:
-                            # print(args.mode)
-                        self.new_zo_step(model, inputs)
-                        print("step is: ", self.state.global_step, "new projected grad is: ",self.projected_grad)
-
-
                         torch.manual_seed(self.zo_random_seed)
-                        for name, param in self.named_parameters_to_optim:
-                            # Resample z
-                            z = torch.normal(mean=0, std=1, size=param.data.size(), device=param.data.device,
-                                            dtype=param.data.dtype)
+                        # Resample z
+                        z = torch.normal(mean=0, std=1, size=param.data.size(), device=param.data.device,
+                                        dtype=param.data.dtype)
 
-                            param.grad = self.projected_grad * z              
-
+                        param.grad = self.projected_grad * z              
 
                         if args.mode in ['lora', 'prefix', 'prompt']:
                             # print(args.mode)
@@ -1066,7 +1066,7 @@ class OurTrainer(Trainer):
 
                 z0 = torch.normal(mean=0, std=1, size=(gauss_rank, gauss_rank), device=param.data.device, dtype=param.data.dtype)
                 # z = U @ z0 @ V * math.sqrt(param.data.numel() / z0.numel())
-                print("z0 shape is",z0.shape)
+                # print("z0 shape is",z0.shape)
                 z = (U @ z0 @ V * math.sqrt(param.data.numel() / z0.numel())).view(param.data.shape).to(param.data.dtype)
 
             else:
