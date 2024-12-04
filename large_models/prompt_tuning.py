@@ -190,7 +190,9 @@ class PromptTuning:
 
         for n, p in model.named_parameters():
             if "prompt_encoder" not in n:
-                p.requires_grad = False
+                # 修改
+                # p.requires_grad = False
+                pass
 
 
 def test_roberta():

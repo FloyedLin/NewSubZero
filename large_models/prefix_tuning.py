@@ -171,7 +171,9 @@ class PrefixTuning:
         # Freeze non-prefix parameters
         for n, p in model.named_parameters():
             if "prefix" not in n:
-                p.requires_grad = False
+                # 修改
+                # p.requires_grad = False
+                pass
 
         # Replace the old prepare_inputs_for_generation function 
         model.prepare_inputs_for_generation = prepare_inputs_for_generation.__get__(model, type(model))

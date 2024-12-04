@@ -282,7 +282,9 @@ class Framework:
                 raise NotImplementedError
             for n, p in model.named_parameters():
                 if head_name not in n:
-                    p.requires_grad = False
+                    # 修改
+                    # p.requires_grad = False
+                    pass
                 else:
                     logger.info(f"Only tuning {n}")
 
