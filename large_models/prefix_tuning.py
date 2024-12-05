@@ -172,7 +172,7 @@ class PrefixTuning:
         for n, p in model.named_parameters():
             if "prefix" not in n:
                 # 修改
-                # p.requires_grad = False
+                p.requires_grad = False
                 pass
 
         # Replace the old prepare_inputs_for_generation function 

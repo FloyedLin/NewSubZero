@@ -283,7 +283,7 @@ class Framework:
             for n, p in model.named_parameters():
                 if head_name not in n:
                     # 修改
-                    # p.requires_grad = False
+                    p.requires_grad = False
                     pass
                 else:
                     logger.info(f"Only tuning {n}")

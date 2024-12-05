@@ -941,9 +941,9 @@ class OurTrainer(Trainer):
 
                     gauss_rank = min(args.gauss_rank, min(param.data.size(0), param.data.size(1)))
 
-                    print("gauss rank is: ", gauss_rank)
-                    print("param name is ", name)
-                    print("param data size is: ", param.data.shape)
+                    # print("gauss rank is: ", gauss_rank)
+                    # print("param name is ", name)
+                    # print("param data size is: ", param.data.shape)
 
                     if self.state.global_step == 0:
    
@@ -980,7 +980,7 @@ class OurTrainer(Trainer):
                         
                     U = p_state['U']
                     V = p_state['V']  
-                    print("U and V shape is",U.shape, V.shape)
+                    # print("U and V shape is",U.shape, V.shape)
                     
                     self.named_parameters_to_optim_new.append((name, param, U, V))
                 else:

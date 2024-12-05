@@ -191,7 +191,7 @@ class PromptTuning:
         for n, p in model.named_parameters():
             if "prompt_encoder" not in n:
                 # 修改
-                # p.requires_grad = False
+                p.requires_grad = False
                 pass
 
 
