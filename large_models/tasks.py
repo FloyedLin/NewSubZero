@@ -247,7 +247,7 @@ class CBDataset(Dataset):
         self.load_dataset(subtask, **kwargs)
 
     def load_dataset(self, path, **kwargs):
-        d = load_dataset("super_glue.py", "cb", trust_remote_code=True)
+        d = load_dataset("super_glue", "cb", trust_remote_code=True)
         train_set = d["train"]
         valid_set = d["validation"]
 
