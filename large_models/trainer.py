@@ -940,7 +940,7 @@ class OurTrainer(Trainer):
             if param.requires_grad:
    
                 if args.quantization:
-                    print("original weight is: ", param.data)
+                    print("original weight is: ", param.data[0])
                     param.data[0] = bnb.functional.quantize_fp4(param.data[0])
                     print("quantize the weight to 4-bit: ", param.data[0])
 
