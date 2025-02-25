@@ -936,13 +936,15 @@ class OurTrainer(Trainer):
         # What parameters to optimize
         # self.named_parameters_to_optim = []
         self.named_parameters_to_optim_new = []
+        self.quant_state = {}
         for name, param in model.named_parameters():
             if param.requires_grad:
    
                 if args.quantization:
                     print("original weight is: ", param.data)
-                    quantized_weight, quant_state =  bnb.functional.quantize_fp4(param.data, None, param.data)
+                    quant_weight, quant_state =  bnb.functional.quantize_fp4(param.data, None, param.data)
                     print("quantize the weight to 4-bit: ", param.data)
+                    self.quant_state[name] = quant_state
 
                 if len(torch.squeeze(param.data).shape) == 2:
 
@@ -1069,7 +1071,9 @@ class OurTrainer(Trainer):
 
             # 增加
             if args.quantization:
-                param.data = bnb.functional.dequantize_fp4(param.data)
+                quant_state = self.quant_state[name]
+                bnb.functional.dequantize_fp4(param.data, quant_state=quant_state, out=param.data)
+                print("dequantize the weight to 4-bit: ", param.data)
 
             # Resample z
             if len(torch.squeeze(param.data).shape) == 2:    
