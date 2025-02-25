@@ -941,9 +941,10 @@ class OurTrainer(Trainer):
             if param.requires_grad:
    
                 if args.quantization:
+                    print("param name is ", name)
                     print("original weight is: ", param.data)
                     quant_weight, quant_state =  bnb.functional.quantize_fp4(param.data, None, param.data)
-                    print("quantize the weight to 4-bit: ", param.data)
+                    # print("quantize the weight to 4-bit: ", param.data)
                     self.quant_state[name] = quant_state
 
                 if len(torch.squeeze(param.data).shape) == 2:
