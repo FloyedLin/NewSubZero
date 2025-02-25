@@ -941,8 +941,8 @@ class OurTrainer(Trainer):
    
                 if args.quantization:
                     print("original weight is: ", param.data)
-                    param.data = bnb.functional.quantize_fp4(param.data)
-                    print("quantize the weight to 4-bit: ", param.data)
+                    param.data[0] = bnb.functional.quantize_fp4(param.data[0])
+                    print("quantize the weight to 4-bit: ", param.data[0])
 
                 if len(torch.squeeze(param.data).shape) == 2:
 
