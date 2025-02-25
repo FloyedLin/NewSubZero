@@ -39,6 +39,9 @@ AutoModelForCausalLM.register(MistralConfig, MistralForCausalLM)
 
 @dataclass
 class OurArguments(TrainingArguments):
+    # 添加参数量化选项
+    quantization: bool = False
+
     # dataset and sampling strategy
     task_name: str = "SST2"  # task name should match the string before Dataset in the Dataset class name. We support the following task_name: SST2, RTE, CB, BoolQ, WSC, WIC, MultiRC, Copa, ReCoRD, SQuAD, DROP
 

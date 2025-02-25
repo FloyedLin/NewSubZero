@@ -16,6 +16,8 @@
 The Trainer class, to easily train a 🤗 Transformers from scratch or finetune it on a new task.
 """
 
+import bitsandbytes as bnb
+
 import inspect
 import math
 import os
@@ -936,6 +938,11 @@ class OurTrainer(Trainer):
         self.named_parameters_to_optim_new = []
         for name, param in model.named_parameters():
             if param.requires_grad:
+   
+                if args.quantization:
+                    print("original weight is: ", param.data)
+                    param.data = bnb.functional.quantize_fp4(param.data)
+                    print("quantize the weight to 4-bit: ", param.data)
 
                 if len(torch.squeeze(param.data).shape) == 2:
 
@@ -1059,6 +1066,11 @@ class OurTrainer(Trainer):
         # Set the random seed to ensure that we sample the same z for perturbation/update
         torch.manual_seed(self.zo_random_seed)
         for name, param, U, V in self.named_parameters_to_optim:
+
+            # 增加
+            if args.quantization:
+                param.data = bnb.functional.dequantize_fp4(param.data)
+
             # Resample z
             if len(torch.squeeze(param.data).shape) == 2:    
 
