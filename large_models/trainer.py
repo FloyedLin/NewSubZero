@@ -944,11 +944,11 @@ class OurTrainer(Trainer):
                 if args.quantization:
                     print("param name is ", name)
                     print("original weight is: ", param.data)
-                    quant_weight, quant_state =  bnb.functional.quantize_fp4(param.data, out=param.data)
+                    quant_weight, quant_state =  bnb.functional.quantize_fp8(param.data, out=param.data)
                     # print("quantize the weight to 4-bit: ", param.data)
                     self.quant_state[name] = quant_state         
                     dequant_weight = torch.zeros_like(param.data)
-                    result = bnb.functional.dequantize_fp4(param.data, quant_state=quant_state, out=dequant_weight)
+                    result = bnb.functional.dequantize_fp8(param.data, quant_state=quant_state, out=dequant_weight)
                     print("dequantize the weight to 4-bit: ", dequant_weight)
 
                 if len(torch.squeeze(param.data).shape) == 2:
@@ -1077,7 +1077,7 @@ class OurTrainer(Trainer):
             # 增加
             if args.quantization:
                 quant_state = self.quant_state[name]
-                bnb.functional.dequantize_fp4(param.data, quant_state=quant_state, out=param.data)
+                bnb.functional.dequantize_fp8(param.data, quant_state=quant_state, out=param.data)
                 # print("dequantize the weight to 4-bit: ", param.data)
 
             # Resample z
@@ -1095,6 +1095,9 @@ class OurTrainer(Trainer):
                              dtype=param.data.dtype)
 
             param.grad = self.projected_grad * z  # NOTE this q division does not work for q>1.
+
+            print("param weight is: ", param.data)
+
             self.optimizer.step()  # will only update grad that is not None.
             # param.data = param.data - graddiff_times_z / args.q  # NOTE this q division does not work for q>1.
             param.grad = None  # avoid further update.
