@@ -888,9 +888,9 @@ class OurTrainer(Trainer):
         for name, param in model.named_parameters():
             if param.requires_grad:
 
-                if args.quantization:
-                    quant_state = self.quant_state[name]
-                    result = bnb.functional.dequantize_fp4(param.data, quant_state=quant_state, out=param.data)
+                # if args.quantization:
+                #     quant_state = self.quant_state[name]
+                #     result = bnb.functional.dequantize_fp4(param.data, quant_state=quant_state, out=param.data)
 
                 self.named_parameters_to_optim.append((name, param))
                 # # TODO avoid init the memory for grad.
