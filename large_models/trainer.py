@@ -1078,7 +1078,7 @@ class OurTrainer(Trainer):
             if args.quantization:
                 quant_state = self.quant_state[name]
                 bnb.functional.dequantize_fp4(param.data, quant_state=quant_state, out=param.data)
-                print("dequantize the weight to 4-bit: ", param.data)
+                # print("dequantize the weight to 4-bit: ", param.data)
 
             # Resample z
             if len(torch.squeeze(param.data).shape) == 2:    
