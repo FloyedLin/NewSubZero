@@ -940,12 +940,14 @@ class OurTrainer(Trainer):
         for name, param in model.named_parameters():
             if param.requires_grad:
    
+                # 增加量化
                 if args.quantization:
                     print("param name is ", name)
                     print("original weight is: ", param.data)
                     quant_weight, quant_state =  bnb.functional.quantize_fp4(param.data, None, param.data)
                     # print("quantize the weight to 4-bit: ", param.data)
                     self.quant_state[name] = quant_state         
+                    dequant_weight = torch.zeros_like(param.data)
                     dequant_weight = bnb.functional.dequantize_fp4(param.data, quant_state=quant_state, out=dequant_weight)
                     print("dequantize the weight to 4-bit: ", dequant_weight)
 
