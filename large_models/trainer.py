@@ -887,6 +887,11 @@ class OurTrainer(Trainer):
   
         for name, param in model.named_parameters():
             if param.requires_grad:
+
+                if args.quantization:
+                    quant_state = self.quant_state[name]
+                    result = bnb.functional.dequantize_fp4(param.data, quant_state=quant_state, out=param.data)
+
                 self.named_parameters_to_optim.append((name, param))
                 # # TODO avoid init the memory for grad.
                 # param.grad = torch.zeros_like(param.data)
@@ -916,6 +921,12 @@ class OurTrainer(Trainer):
 
         # No gradient accumulation support
         # assert self.args.gradient_accumulation_steps == 1
+
+        for name, param in model.named_parameters():
+            if param.requires_grad:
+                
+                if args.quantization:
+                    quant_weight, quant_state =  bnb.functional.quantize_fp4(param.data, out=param.data)
 
         return loss1
 
@@ -1098,6 +1109,7 @@ class OurTrainer(Trainer):
             
             if args.quantization:
                 print("param grad is: ", param.grad)
+                print("projected grad is: ", self.projected_grad)
 
             self.optimizer.step()  # will only update grad that is not None.
             # param.data = param.data - graddiff_times_z / args.q  # NOTE this q division does not work for q>1.
