@@ -287,7 +287,6 @@ class Framework:
                 if head_name not in n:
                     # 修改
                     p.requires_grad = False
-                    pass
                 else:
                     logger.info(f"Only tuning {n}")
 

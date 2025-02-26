@@ -1095,8 +1095,9 @@ class OurTrainer(Trainer):
                              dtype=param.data.dtype)
 
             param.grad = self.projected_grad * z  # NOTE this q division does not work for q>1.
-
-            print("param weight is: ", param.data)
+            
+            if args.quantization:
+                print("param grad is: ", param.grad)
 
             self.optimizer.step()  # will only update grad that is not None.
             # param.data = param.data - graddiff_times_z / args.q  # NOTE this q division does not work for q>1.
