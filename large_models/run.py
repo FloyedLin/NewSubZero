@@ -181,6 +181,11 @@ class Framework:
                 # Untie embeddings/LM head
                 logger.warn("Untie embeddings and LM head")
                 config.tie_word_embeddings = False
+            
+            # 增加量化
+            if self.args.quantization:
+                self.args.no_auto_device = True
+
             if self.args.head_tuning:
                 torch_dtype = torch.float32
                 if self.args.load_float16:
@@ -222,7 +227,21 @@ class Framework:
                     raise NotImplementedError(f"Head tuning is not supported for {self.args.model_name}")
             elif self.args.no_auto_device:
                 # No auto device (use for FSDP)
-                model = AutoModelForCausalLM.from_pretrained(self.args.model_name, config=config, )
+                from transformers import BitsAndBytesConfig, AutoModelForCausalLM
+                bnb_config = BitsAndBytesConfig(
+                    load_in_4bit=True,
+                    bnb_4bit_quant_type="nf4",
+                    bnb_4bit_compute_dtype=torch.bfloat16,
+                    bnb_4bit_quant_storage=torch.bfloat16,
+                )
+
+                print("### Loading model with quantization ###")
+
+                model = AutoModelForCausalLM.from_pretrained(
+                    self.args.model_name, 
+                    quantization_config=bnb_config,
+                    # config=config,
+                )
             else:
                 # Auto device loading
                 torch_dtype = torch.float32
