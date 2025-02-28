@@ -514,7 +514,7 @@ class Framework:
             return data
 
         with count_time("Tokenizing training samples"):
-            print(f"训练样本大小: {len(train_samples)}")
+            # print(f"训练样本大小: {len(train_samples)}")
             train_dataset = HFDataset(_convert(train_samples))
             eval_dataset = HFDataset(_convert(eval_samples))
             dev_dataset = HFDataset(_convert(dev_samples))

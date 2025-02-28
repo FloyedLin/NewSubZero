@@ -890,7 +890,7 @@ class OurTrainer(Trainer):
 
                 # if args.quantization:
                 #     quant_state = self.quant_state[name]
-                #     result = bnb.functional.dequantize_fp4(param.data, quant_state=quant_state, out=param.data)
+                #     result = bnb.functional.dequantize_nf4(param.data, quant_state=quant_state, out=param.data)
 
                 self.named_parameters_to_optim.append((name, param))
                 # # TODO avoid init the memory for grad.
@@ -926,7 +926,7 @@ class OurTrainer(Trainer):
             if param.requires_grad:
                 
                 if args.quantization:
-                    quant_weight, quant_state =  bnb.functional.quantize_fp4(param.data, out=param.data)
+                    quant_weight, quant_state =  bnb.functional.quantize_nf4(param.data, out=param.data)
 
         return loss1
 
@@ -955,11 +955,11 @@ class OurTrainer(Trainer):
                 if args.quantization:
                     print("param name is ", name)
                     print("original weight is: ", param.data)
-                    quant_weight, quant_state =  bnb.functional.quantize_fp4(param.data, out=param.data)
+                    quant_weight, quant_state =  bnb.functional.quantize_nf4(param.data, out=param.data)
                     # print("quantize the weight to 4-bit: ", param.data)
                     self.quant_state[name] = quant_state         
                     dequant_weight = torch.zeros_like(param.data)
-                    result = bnb.functional.dequantize_fp4(param.data, quant_state=quant_state, out=dequant_weight)
+                    result = bnb.functional.dequantize_nf4(param.data, quant_state=quant_state, out=dequant_weight)
                     print("dequantize the weight to 4-bit: ", dequant_weight)
 
                 if len(torch.squeeze(param.data).shape) == 2:
@@ -1088,7 +1088,7 @@ class OurTrainer(Trainer):
             # 增加
             if args.quantization:
                 quant_state = self.quant_state[name]
-                bnb.functional.dequantize_fp4(param.data, quant_state=quant_state, out=param.data)
+                bnb.functional.dequantize_nf4(param.data, quant_state=quant_state, out=param.data)
                 # print("dequantize the weight to 4-bit: ", param.data)
 
             # Resample z
