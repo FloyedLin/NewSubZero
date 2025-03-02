@@ -245,6 +245,12 @@ class Framework:
 
                 from peft import prepare_model_for_kbit_training
                 model = prepare_model_for_kbit_training(model)
+
+                import bitsandbytes as bnb
+                self.quant_state = {}
+                for name, param in model.named_parameters():
+                    _, self.quant_state[name] =  bnb.functional.quantize_nf4(param.data, out=param.data)
+
             elif self.args.no_auto_device:
                 # No auto device (use for FSDP)
                 model = AutoModelForCausalLM.from_pretrained(self.args.model_name, config=config, )
