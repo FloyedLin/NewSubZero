@@ -890,7 +890,7 @@ class OurTrainer(Trainer):
                 # if param.requires_grad: 
                 #     quant_state = self.quant_state[name]
                 #     result = bnb.functional.dequantize_nf4(param.data, quant_state=quant_state, out=param.data)
-                bnb.functional.dequantize_nf4(param.data, quant_state=self.quant_state[name], out=param.data)
+                bnb.functional.dequantize_nf4(param.data, quant_state=param.quant_state, out=param.data)
                 # print("dequantize the weight to 4-bit: ", param.data)
 
                 self.named_parameters_to_optim.append((name, param))
@@ -930,7 +930,7 @@ class OurTrainer(Trainer):
         if args.quantization:
             for name, param in model.named_parameters():
                 if param.requires_grad:
-                    _, self.quant_state[name] =  bnb.functional.quantize_nf4(param.data, out=param.data)
+                    _, param.quant_state =  bnb.functional.quantize_nf4(param.data, out=param.data)
 
         return loss1
 
@@ -1029,7 +1029,7 @@ class OurTrainer(Trainer):
         if args.quantization:
             for name, param in model.named_parameters():
                 if param.requires_grad:
-                    bnb.functional.dequantize_nf4(param.data, quant_state=self.quant_state[name], out=param.data)
+                    bnb.functional.dequantize_nf4(param.data, quant_state=param.quant_state, out=param.data)
 
         # First function evaluation
         self.zo_subspace_perturb_parameters(scaling_factor=1)
@@ -1058,7 +1058,7 @@ class OurTrainer(Trainer):
         if args.quantization:
             for name, param in model.named_parameters():
                 if param.requires_grad:
-                    _, self.quant_state[name] =  bnb.functional.quantize_nf4(param.data, out=param.data)
+                    _, param.quant_state =  bnb.functional.quantize_nf4(param.data, out=param.data)
 
         # for name, param in self.named_parameters_to_optim:
         #     param.grad = param.grad / args.q

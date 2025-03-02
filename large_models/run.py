@@ -247,10 +247,10 @@ class Framework:
                 from peft import prepare_model_for_kbit_training
                 # model = prepare_model_for_kbit_training(model)
 
-                # import bitsandbytes as bnb
-                # self.quant_state = {}
-                # for name, param in model.named_parameters():
-                #     _, self.quant_state[name] =  bnb.functional.quantize_nf4(param.data, out=param.data)
+                import bitsandbytes as bnb
+                for name, param in self.model.named_parameters():
+                    _, param.quant_state =  bnb.functional.quantize_nf4(param.data, out=param.data)
+                    # print("after quant param.data: ", param.data)
                 
 
             elif self.args.no_auto_device:
@@ -558,11 +558,11 @@ class Framework:
                              )
         
         # 增加
-        import bitsandbytes as bnb
-        trainer.quant_state = {}
-        for name, param in self.model.named_parameters():
-            _, trainer.quant_state[name] =  bnb.functional.quantize_nf4(param.data, out=param.data)
-            # print("after quant param.data: ", param.data)
+        # import bitsandbytes as bnb
+        # trainer.quant_state = {}
+        # for name, param in self.model.named_parameters():
+        #     _, trainer.quant_state[name] =  bnb.functional.quantize_nf4(param.data, out=param.data)
+        #     # print("after quant param.data: ", param.data)
         
         if self.args.save_on_interrupt:
             trainer.add_callback(SIGUSR1Callback())
