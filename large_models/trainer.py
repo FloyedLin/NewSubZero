@@ -921,6 +921,8 @@ class OurTrainer(Trainer):
                 # Reset model back to its parameters at start of step
                 self.zo_perturb_parameters(scaling_factor=1)
 
+        print("projected grad is: ", self.projected_grad)
+        print("loss2 is: ", loss2)
         # No gradient accumulation support
         # assert self.args.gradient_accumulation_steps == 1
 
