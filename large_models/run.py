@@ -225,7 +225,7 @@ class Framework:
                     )
                 else:
                     raise NotImplementedError(f"Head tuning is not supported for {self.args.model_name}")
-            elif self.args.quantization or self.args.no_auto_device:
+            elif self.args.quantization:
                 # No auto device (use for FSDP)
                 from transformers import BitsAndBytesConfig, AutoModelForCausalLM
                 bnb_config = BitsAndBytesConfig(
@@ -245,6 +245,9 @@ class Framework:
 
                 from peft import prepare_model_for_kbit_training
                 model = prepare_model_for_kbit_training(model)
+            elif self.args.no_auto_device:
+                # No auto device (use for FSDP)
+                model = AutoModelForCausalLM.from_pretrained(self.args.model_name, config=config, )
             else:
                 # Auto device loading
                 torch_dtype = torch.float32
