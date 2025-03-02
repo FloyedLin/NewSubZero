@@ -244,16 +244,14 @@ class Framework:
                     # config=config,
                 )
 
-                # from peft import prepare_model_for_kbit_training
-                # model = prepare_model_for_kbit_training(model)
+                from peft import prepare_model_for_kbit_training
+                model = prepare_model_for_kbit_training(model)
 
-                import bitsandbytes as bnb
-                self.quant_state = {}
-                for name, param in model.named_parameters():
-                    _, self.quant_state[name] =  bnb.functional.quantize_nf4(param.data, out=param.data)
-                    print(name, param.data.dtype, param.data.shape)
+                # import bitsandbytes as bnb
+                # self.quant_state = {}
+                # for name, param in model.named_parameters():
+                #     _, self.quant_state[name] =  bnb.functional.quantize_nf4(param.data, out=param.data)
                 
-                print("Model loaded with quantization")
 
             elif self.args.no_auto_device:
                 # No auto device (use for FSDP)
@@ -558,6 +556,12 @@ class Framework:
                              evaluate_func=self.evaluate,
                              writer=writer
                              )
+        
+        # 增加
+        import bitsandbytes as bnb
+        trainer.quant_state = {}
+        for name, param in self.model.named_parameters():
+            _, trainer.quant_state[name] =  bnb.functional.quantize_nf4(param.data, out=param.data)
         
         if self.args.save_on_interrupt:
             trainer.add_callback(SIGUSR1Callback())
