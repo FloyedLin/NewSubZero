@@ -251,6 +251,8 @@ class Framework:
                 self.quant_state = {}
                 for name, param in model.named_parameters():
                     _, self.quant_state[name] =  bnb.functional.quantize_nf4(param.data, out=param.data)
+                
+                print("Model loaded with quantization")
 
             elif self.args.no_auto_device:
                 # No auto device (use for FSDP)

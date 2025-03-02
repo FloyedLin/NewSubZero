@@ -1028,7 +1028,9 @@ class OurTrainer(Trainer):
         # print("named parameters to optim is: ",self.named_parameters_to_optim)
 
         if args.quantization:
-            bnb.functional.dequantize_nf4(param.data, quant_state=self.quant_state[name], out=param.data)
+            for name, param in model.named_parameters():
+                if param.requires_grad:
+                    bnb.functional.dequantize_nf4(param.data, quant_state=self.quant_state[name], out=param.data)
 
         # First function evaluation
         self.zo_subspace_perturb_parameters(scaling_factor=1)
@@ -1054,9 +1056,9 @@ class OurTrainer(Trainer):
             print("after zo subspace step, loss2 is: ", loss2)
             print("after zo subspace step, project grad is: ", self.projected_grad)
         
-        for name, param in model.named_parameters():
-            if param.requires_grad:
-                if args.quantization:
+        if args.quantization:
+            for name, param in model.named_parameters():
+                if param.requires_grad:
                     _, self.quant_state[name] =  bnb.functional.quantize_nf4(param.data, out=param.data)
 
         # for name, param in self.named_parameters_to_optim:
