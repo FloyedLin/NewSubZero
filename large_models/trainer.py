@@ -1094,9 +1094,9 @@ class OurTrainer(Trainer):
         for name, param, U, V in self.named_parameters_to_optim:
 
             # 增加
-            if args.quantization:
-                quant_state = self.quant_state[name]
-                bnb.functional.dequantize_nf4(param.data, quant_state=quant_state, out=param.data)
+            # if args.quantization:
+                # quant_state = self.quant_state[name]
+                # bnb.functional.dequantize_nf4(param.data, quant_state=quant_state, out=param.data)
                 # print("dequantize the weight to 4-bit: ", param.data)
 
             # Resample z
