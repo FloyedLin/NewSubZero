@@ -891,7 +891,7 @@ class OurTrainer(Trainer):
                 if args.quantization:
                 #     quant_state = self.quant_state[name]
                 #     result = bnb.functional.dequantize_nf4(param.data, quant_state=quant_state, out=param.data)
-                    bnb.functional.dequantize_nf4(param.data, quant_state=quant_state, out=param.data)
+                    bnb.functional.dequantize_nf4(param.data, quant_state=self.quant_state[name], out=param.data)
 
                 self.named_parameters_to_optim.append((name, param))
                 # # TODO avoid init the memory for grad.
@@ -929,7 +929,6 @@ class OurTrainer(Trainer):
 
         for name, param in model.named_parameters():
             if param.requires_grad:
-                
                 if args.quantization:
                     _, self.quant_state[name] =  bnb.functional.quantize_nf4(param.data, out=param.data)
 
@@ -980,8 +979,7 @@ class OurTrainer(Trainer):
                         self.p_state[name] = {'U': torch.zeros(param.data.size(0), gauss_rank), 
                                                 'V': torch.zeros(gauss_rank, param.data.size(1))}
                   
-                    p_state = self.p_state[name]          
-                        
+                    p_state = self.p_state[name]           
                     
                     if self.state.global_step % args.update_interval == 0:
                         torch.manual_seed(self.zo_random_seed)
@@ -1029,6 +1027,9 @@ class OurTrainer(Trainer):
 
         # print("named parameters to optim is: ",self.named_parameters_to_optim)
 
+        if args.quantization:
+            bnb.functional.dequantize_nf4(param.data, quant_state=self.quant_state[name], out=param.data)
+
         # First function evaluation
         self.zo_subspace_perturb_parameters(scaling_factor=1)
         loss1 = self.zo_forward(model, inputs)
@@ -1052,6 +1053,11 @@ class OurTrainer(Trainer):
             print("after zo subspace step, loss1 is: ", loss1)
             print("after zo subspace step, loss2 is: ", loss2)
             print("after zo subspace step, project grad is: ", self.projected_grad)
+        
+        for name, param in model.named_parameters():
+            if param.requires_grad:
+                if args.quantization:
+                    _, self.quant_state[name] =  bnb.functional.quantize_nf4(param.data, out=param.data)
 
         # for name, param in self.named_parameters_to_optim:
         #     param.grad = param.grad / args.q
