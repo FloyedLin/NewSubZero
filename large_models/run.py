@@ -251,6 +251,7 @@ class Framework:
                 self.quant_state = {}
                 for name, param in model.named_parameters():
                     _, self.quant_state[name] =  bnb.functional.quantize_nf4(param.data, out=param.data)
+                    print(name, param.data.dtype, param.data.shape)
                 
                 print("Model loaded with quantization")
 
