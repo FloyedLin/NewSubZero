@@ -891,7 +891,7 @@ class OurTrainer(Trainer):
                 #     quant_state = self.quant_state[name]
                 #     result = bnb.functional.dequantize_nf4(param.data, quant_state=quant_state, out=param.data)
                 bnb.functional.dequantize_nf4(param.data, quant_state=self.quant_state[name], out=param.data)
-                print("dequantize the weight to 4-bit: ", param.data)
+                # print("dequantize the weight to 4-bit: ", param.data)
 
                 self.named_parameters_to_optim.append((name, param))
                 # # TODO avoid init the memory for grad.

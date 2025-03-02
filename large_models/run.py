@@ -245,7 +245,7 @@ class Framework:
                 )
 
                 from peft import prepare_model_for_kbit_training
-                model = prepare_model_for_kbit_training(model)
+                # model = prepare_model_for_kbit_training(model)
 
                 # import bitsandbytes as bnb
                 # self.quant_state = {}
