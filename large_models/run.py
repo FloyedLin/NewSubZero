@@ -562,7 +562,7 @@ class Framework:
         trainer.quant_state = {}
         for name, param in self.model.named_parameters():
             _, trainer.quant_state[name] =  bnb.functional.quantize_nf4(param.data, out=param.data)
-            print("after quant param.data: ", param.data)
+            # print("after quant param.data: ", param.data)
         
         if self.args.save_on_interrupt:
             trainer.add_callback(SIGUSR1Callback())
