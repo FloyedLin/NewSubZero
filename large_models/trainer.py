@@ -1048,6 +1048,8 @@ class OurTrainer(Trainer):
                 self.zo_subspace_perturb_parameters(scaling_factor=1)
 
         if args.quantization:
+            print("after zo subspace step, loss1 is: ", loss1)
+            print("after zo subspace step, loss2 is: ", loss2)
             print("after zo subspace step, project grad is: ", self.projected_grad)
 
         # for name, param in self.named_parameters_to_optim:
