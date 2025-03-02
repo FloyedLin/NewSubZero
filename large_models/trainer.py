@@ -904,6 +904,8 @@ class OurTrainer(Trainer):
         self.zo_perturb_parameters(scaling_factor=1)
         loss1 = self.zo_forward(model, inputs)
 
+        print("loss1 is: ", loss1)
+
         # Second function evaluation
         assert args.q == 1, "only support q=1 for the memory efficiency. If you want to implement q>1, need to store random seeds to save memory. In addition, we need to set different random seed for different z in the q-loop."
         for _ in range(args.q):  # TODO shall we change the seed?
@@ -953,14 +955,14 @@ class OurTrainer(Trainer):
    
                 # 增加量化
                 if args.quantization:
-                    print("param name is ", name)
-                    print("original weight is: ", param.data)
+                    # print("param name is ", name)
+                    # print("original weight is: ", param.data)
                     quant_weight, quant_state =  bnb.functional.quantize_nf4(param.data, out=param.data)
                     # print("quantize the weight to 4-bit: ", param.data)
                     self.quant_state[name] = quant_state         
                     dequant_weight = torch.zeros_like(param.data)
                     result = bnb.functional.dequantize_nf4(param.data, quant_state=quant_state, out=dequant_weight)
-                    print("dequantize the weight to 4-bit: ", dequant_weight)
+                    # print("dequantize the weight to 4-bit: ", dequant_weight)
 
                 if len(torch.squeeze(param.data).shape) == 2:
 
@@ -1108,8 +1110,9 @@ class OurTrainer(Trainer):
             param.grad = self.projected_grad * z  # NOTE this q division does not work for q>1.
             
             if args.quantization:
-                print("param grad is: ", param.grad)
-                print("projected grad is: ", self.projected_grad)
+                # print("param grad is: ", param.grad)
+                # print("projected grad is: ", self.projected_grad)
+                pass
 
             self.optimizer.step()  # will only update grad that is not None.
             # param.data = param.data - graddiff_times_z / args.q  # NOTE this q division does not work for q>1.
