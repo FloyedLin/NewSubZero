@@ -885,10 +885,9 @@ class OurTrainer(Trainer):
         # What parameters to optimize
         self.named_parameters_to_optim = []
   
-        for name, param in model.named_parameters():
-            if param.requires_grad:
-
-                if args.quantization:
+        if args.quantization:
+            for name, param in model.named_parameters():
+                if param.requires_grad: 
                 #     quant_state = self.quant_state[name]
                 #     result = bnb.functional.dequantize_nf4(param.data, quant_state=quant_state, out=param.data)
                     bnb.functional.dequantize_nf4(param.data, quant_state=self.quant_state[name], out=param.data)
@@ -928,9 +927,9 @@ class OurTrainer(Trainer):
         # No gradient accumulation support
         # assert self.args.gradient_accumulation_steps == 1
 
-        for name, param in model.named_parameters():
-            if param.requires_grad:
-                if args.quantization:
+        if args.quantization:
+            for name, param in model.named_parameters():
+                if param.requires_grad:
                     _, self.quant_state[name] =  bnb.functional.quantize_nf4(param.data, out=param.data)
 
         return loss1
