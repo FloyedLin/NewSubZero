@@ -921,8 +921,8 @@ class OurTrainer(Trainer):
                 # Reset model back to its parameters at start of step
                 self.zo_perturb_parameters(scaling_factor=1)
 
-        print("projected grad is: ", self.projected_grad)
         print("loss2 is: ", loss2)
+        print("projected grad is: ", self.projected_grad)
         # No gradient accumulation support
         # assert self.args.gradient_accumulation_steps == 1
 
@@ -1009,7 +1009,7 @@ class OurTrainer(Trainer):
                         
                     U = p_state['U']
                     V = p_state['V']  
-                    # print("U and V shape is",U.shape, V.shape)
+                    # print("U and V shape is", U.shape, V.shape)
                     
                     self.named_parameters_to_optim_new.append((name, param, U, V))
                 else:
@@ -1047,6 +1047,8 @@ class OurTrainer(Trainer):
                 # Reset model back to its parameters at start of step
                 self.zo_subspace_perturb_parameters(scaling_factor=1)
 
+        if args.quantization:
+            print("after zo subspace step, project grad is: ", self.projected_grad)
 
         # for name, param in self.named_parameters_to_optim:
         #     param.grad = param.grad / args.q
