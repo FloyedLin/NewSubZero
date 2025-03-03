@@ -17,6 +17,7 @@ from transformers import (
     TrainingArguments,
     DataCollatorForTokenClassification
 )
+import bitsandbytes as bnb
 
 from metrics import calculate_metric
 from modeling_mistral import (
@@ -244,10 +245,9 @@ class Framework:
                     # config=config,
                 )
 
-                from peft import prepare_model_for_kbit_training
+                # from peft import prepare_model_for_kbit_training
                 # model = prepare_model_for_kbit_training(model)
 
-                import bitsandbytes as bnb
                 for name, param in model.named_parameters():
                     _, param.quant_state =  bnb.functional.quantize_nf4(param.data, out=param.data)
                     # print("after quant param.data: ", param.data)
@@ -580,6 +580,10 @@ class Framework:
 
         # This calls the trainer._inner_training_loop()
         trainer.train(resume_from_checkpoint=last_checkpoint)
+
+        if self.args.quantization:
+            for name, param in self.model.named_parameters():
+                bnb.functional.dequantize_nf4(param.data, quant_state=param.quant_state, out=param.data)
 
         # Explicitly save the model
         if self.args.save_model:
