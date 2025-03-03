@@ -884,19 +884,18 @@ class OurTrainer(Trainer):
 
         # What parameters to optimize
         self.named_parameters_to_optim = []
-  
-        if args.quantization:
-            for name, param in model.named_parameters():
-                # if param.requires_grad: 
-                #     quant_state = self.quant_state[name]
-                #     result = bnb.functional.dequantize_nf4(param.data, quant_state=quant_state, out=param.data)
-                bnb.functional.dequantize_nf4(param.data, quant_state=param.quant_state, out=param.data)
-                # print("dequantize the weight to 4-bit: ", param.data)
 
+        for name, param in model.named_parameters():
+            if param.requires_grad:
                 self.named_parameters_to_optim.append((name, param))
                 # # TODO avoid init the memory for grad.
                 # param.grad = torch.zeros_like(param.data)
                 # param.grad = None  # Make sure the grad is empty and will not be updated.
+
+        if args.quantization:
+            for name, param in model.named_parameters():
+                if param.requires_grad:
+                    bnb.functional.dequantize_nf4(param.data, quant_state=param.quant_state, out=param.data)                
 
         # Sample the random seed for sampling z
         self.zo_random_seed = np.random.randint(1000000000)
