@@ -1030,6 +1030,7 @@ class OurTrainer(Trainer):
             for name, param in model.named_parameters():
                 if param.requires_grad:
                     bnb.functional.dequantize_nf4(param.data, quant_state=param.quant_state, out=param.data)
+                    print("param", name, "dequantize the weight to 4-bit: ", param.data)
 
         # First function evaluation
         self.zo_subspace_perturb_parameters(scaling_factor=1)
