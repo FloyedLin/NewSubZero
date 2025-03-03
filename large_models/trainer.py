@@ -949,7 +949,6 @@ class OurTrainer(Trainer):
         # What parameters to optimize
         # self.named_parameters_to_optim = []
         self.named_parameters_to_optim_new = []
-        self.quant_state = {}
         for name, param in model.named_parameters():
             if param.requires_grad:
    
@@ -1097,10 +1096,16 @@ class OurTrainer(Trainer):
         # model.zero_grad()
 
     def zo_subspace_update(self, model):
-        
+
         args = self.args
         # Set the random seed to ensure that we sample the same z for perturbation/update
         torch.manual_seed(self.zo_random_seed)
+
+        if args.quantization:
+            for name, param in model.named_parameters():
+                if param.requires_grad:
+                    bnb.functional.dequantize_nf4(param.data, quant_state=param.quant_state, out=param.data)     
+
         for name, param, U, V in self.named_parameters_to_optim:
 
             # 增加
@@ -1124,11 +1129,6 @@ class OurTrainer(Trainer):
                              dtype=param.data.dtype)
 
             param.grad = self.projected_grad * z  # NOTE this q division does not work for q>1.
-            
-            if args.quantization:
-                # print("param grad is: ", param.grad)
-                # print("projected grad is: ", self.projected_grad)
-                pass
 
             self.optimizer.step()  # will only update grad that is not None.
             # param.data = param.data - graddiff_times_z / args.q  # NOTE this q division does not work for q>1.
@@ -1142,6 +1142,11 @@ class OurTrainer(Trainer):
         self.lr_scheduler.step()  # NOTE When we use own optimizer, this will no longer update the lr anymore.
         # self.optimizer.zero_grad()
         # model.zero_grad()
+
+        if args.quantization:
+            for name, param in model.named_parameters():
+                if param.requires_grad:
+                    _, param.quant_state =  bnb.functional.quantize_nf4(param.data, out=param.data)
         
     @staticmethod
     @torch.no_grad()
