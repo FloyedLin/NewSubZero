@@ -248,7 +248,7 @@ class Framework:
                 # model = prepare_model_for_kbit_training(model)
 
                 import bitsandbytes as bnb
-                for name, param in self.model.named_parameters():
+                for name, param in model.named_parameters():
                     _, param.quant_state =  bnb.functional.quantize_nf4(param.data, out=param.data)
                     # print("after quant param.data: ", param.data)
                 
