@@ -905,7 +905,7 @@ class OurTrainer(Trainer):
         self.zo_perturb_parameters(scaling_factor=1)
         loss1 = self.zo_forward(model, inputs)
 
-        print("loss1 is: ", loss1)
+        # print("loss1 is: ", loss1)
 
         # Second function evaluation
         assert args.q == 1, "only support q=1 for the memory efficiency. If you want to implement q>1, need to store random seeds to save memory. In addition, we need to set different random seed for different z in the q-loop."
@@ -922,8 +922,8 @@ class OurTrainer(Trainer):
                 # Reset model back to its parameters at start of step
                 self.zo_perturb_parameters(scaling_factor=1)
 
-        print("loss2 is: ", loss2)
-        print("projected grad is: ", self.projected_grad)
+        # print("loss2 is: ", loss2)
+        # print("projected grad is: ", self.projected_grad)
         # No gradient accumulation support
         # assert self.args.gradient_accumulation_steps == 1
 
@@ -1051,9 +1051,10 @@ class OurTrainer(Trainer):
                 self.zo_subspace_perturb_parameters(scaling_factor=1)
 
         if args.quantization:
-            print("after zo subspace step, loss1 is: ", loss1)
-            print("after zo subspace step, loss2 is: ", loss2)
-            print("after zo subspace step, project grad is: ", self.projected_grad)
+            # print("after zo subspace step, loss1 is: ", loss1)
+            # print("after zo subspace step, loss2 is: ", loss2)
+            # print("after zo subspace step, project grad is: ", self.projected_grad)
+            pass
         
         if args.quantization:
             for name, param in model.named_parameters():
