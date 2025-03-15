@@ -146,8 +146,6 @@ class OurTrainer(Trainer):
         print('first batchsize', batch_size)
         # Data loader and number of training steps
 
-        # print(f"训练数据集大小: {len(self.train_dataset)}")
-
         train_dataloader = self.get_train_dataloader()
         eval_dataloader = self.get_eval_dataloader()  # ----newly-added
         print(next(iter(train_dataloader)))
@@ -331,6 +329,8 @@ class OurTrainer(Trainer):
             # self.optimizer = {name: SGD([param], lr=args.learning_rate) for name, param in self.model.named_parameters()}
             # print(f"### args.lr_scheduler: {args.lr_scheduler_type}")
             assert args.lr_scheduler_type == 'constant', "we did not implement lr_schedule."    
+        elif args.trainer == "lozo_sgd":
+            self.optimizer = SGD(self.model.parameters(), lr=args.learning_rate, momentum=args.momentum)
         else:
             assert args.lr_scheduler_type == 'constant', "we did not implement lr_schedule."
             if args.optimizer == "adam":
@@ -501,6 +501,12 @@ class OurTrainer(Trainer):
                         tr_loss_step = self.zo_subspace_step(model, inputs)            
                     else:
                         raise ValueError(f"q={args.q} is not supported.")
+                elif args.trainer in ["lozo_sgd"]:
+
+                    if args.q == 1:
+                        tr_loss_step = self.lozo_step(model, inputs)            
+                    else:
+                        raise ValueError(f"q={args.q} is not supported.")
                 elif args.trainer == "forward_grad":
                     tr_loss_step = self.forward_grad_step(model, inputs)
                 else:
@@ -547,6 +553,8 @@ class OurTrainer(Trainer):
                         self.zo_subspace_update(model)
                     elif args.trainer == "forward_grad":
                         self.forward_grad_update(model)
+                    elif args.trainer == "lozo_sgd":
+                        self.lozo_update(model)
                     else:
                         self.gradient_update(model)
                     
@@ -1147,7 +1155,102 @@ class OurTrainer(Trainer):
             for name, param in model.named_parameters():
                 if param.requires_grad:
                     _, param.quant_state =  bnb.functional.quantize_nf4(param.data, out=param.data)
+
+    # LOZO
+
+    def lozo_perturb_parameters(self, random_seed=None, scaling_factor=1):
+        """
+        Perturb the parameters with random vector uv^t.
+        """
+        args = self.args
+        step = self.step
+
+        torch.manual_seed(random_seed if random_seed is not None else self.zo_random_seed)
         
+        for name, param in self.named_parameters_to_optim:
+            if param.data.ndim >= 2:
+                if step % args.step_interval == 0:
+                    v = torch.randn(param.data.size(1), args.rank_r, device=param.data.device, dtype=param.data.dtype)
+                    self.v[name] = v
+                else:
+                    v = self.v[name]
+                u = self.random_gaussian_matrix(m=param.data.size(0), n=args.rank_r, device=param.data.device, dtype=param.data.dtype)
+                param.data = param.data + scaling_factor * (u@v.t()) * self.args.zo_eps
+            else:
+                z = torch.normal(mean=0, std=1, size=param.data.size(), device=param.data.device, dtype=param.data.dtype)
+                param.data = param.data + scaling_factor * z * self.args.zo_eps
+
+
+    def lozo_step(self, model, inputs):
+        """
+        Estimate gradient by Lowrank-zo. Return the loss from f(theta + uv^t)
+        """
+        args = self.args
+        if hasattr(self, 'step'):
+            self.step += 1
+        else:
+            self.step = 0
+            self.v = {}
+
+        self.named_parameters_to_optim = []
+        for name, param in model.named_parameters():
+            if param.requires_grad:
+                self.named_parameters_to_optim.append((name, param))
+
+        # Sample the random seed for sampling 
+        self.zo_random_seed = np.random.randint(1000000000)
+
+        # First function evaluation
+        self.lozo_perturb_parameters(scaling_factor=1)
+        loss1 = self.zo_forward(model, inputs)
+
+        # Second function evaluation
+        self.lozo_perturb_parameters(scaling_factor=-2)
+        loss2 = self.zo_forward(model, inputs)
+
+        self.projected_grad = ((loss1 - loss2) / (2 * self.args.zo_eps)).item()
+
+        # No gradient accumulation support
+        assert self.args.gradient_accumulation_steps == 1
+
+        # Reset model back to its parameters at start of step
+        self.lozo_perturb_parameters(scaling_factor=1)
+        return loss1
+
+
+    def lozo_update(self):
+        args = self.args
+
+        # Reset the random seed for sampling 
+        torch.manual_seed(self.zo_random_seed)     
+
+        for name, param in self.named_parameters_to_optim:
+            if param.data.ndim >= 2:
+                v = self.v[name]
+                u = self.random_gaussian_matrix(m=param.data.size(0), n=args.rank_r, device=param.data.device, dtype=param.data.dtype)
+
+                if "bias" not in name and "layer_norm" not in name and "layernorm" not in name:
+                    param.data = param.data - self._get_learning_rate() * (self.projected_grad * (u@v.t()) + args.weight_decay * param.data)
+                else:
+                    param.data = param.data - self._get_learning_rate() * (self.projected_grad * (u@v.t()))
+            else:
+                # Resample z for bias
+                z = torch.normal(mean=0, std=1, size=param.data.size(), device=param.data.device, dtype=param.data.dtype)
+                if "bias" not in name and "layer_norm" not in name and "layernorm" not in name:
+                    param.data = param.data - self._get_learning_rate() * (self.projected_grad * z + args.weight_decay * param.data)
+                else:
+                    param.data = param.data - self._get_learning_rate() * (self.projected_grad * z)
+
+        self.lr_scheduler.step()
+        
+    def random_gaussian_matrix(self, m, n, device, dtype, random_seed=None):
+        if random_seed is not None:
+            torch.manual_seed(random_seed)
+
+        random_matrix = torch.randn(m, n, device=device, dtype=dtype)
+        return random_matrix
+
+
     @staticmethod
     @torch.no_grad()
     def functional_call_loss(params, names, buffers, model, batch):

@@ -79,6 +79,7 @@ class OurArguments(TrainingArguments):
     ## - zo_sign_opt: zeroth-order sign sgd training
     ## - forward_grad: forward gradient
     ## (add) -zo_sgd_svd 
+    ## (add) -lozo_sgd: low rank zo sgd
     
     optimizer: str = "adamw"
     ## options
@@ -242,7 +243,7 @@ class Framework:
                 model = AutoModelForCausalLM.from_pretrained(
                     self.args.model_name, 
                     quantization_config=bnb_config,
-                    # config=config,
+                    config=config,
                 )
 
                 # from peft import prepare_model_for_kbit_training
@@ -528,7 +529,6 @@ class Framework:
             return data
 
         with count_time("Tokenizing training samples"):
-            # print(f"训练样本大小: {len(train_samples)}")
             train_dataset = HFDataset(_convert(train_samples))
             eval_dataset = HFDataset(_convert(eval_samples))
             dev_dataset = HFDataset(_convert(dev_samples))
