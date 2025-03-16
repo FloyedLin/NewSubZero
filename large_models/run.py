@@ -98,6 +98,8 @@ class OurArguments(TrainingArguments):
 
     update_interval: int = 2000
     gauss_rank: int = 8
+    step_interval: int = 50 # lozo
+    rank_r: int = 2 # lozo
 
     
     # Prefix tuning
@@ -229,7 +231,8 @@ class Framework:
                     raise NotImplementedError(f"Head tuning is not supported for {self.args.model_name}")
             elif self.args.quantization:
                 # No auto device (use for FSDP)
-                from transformers import BitsAndBytesConfig, AutoModelForCausalLM
+                import bitsandbytes as bnb
+                from transformers import BitsAndBytesConfig
                 bnb_config = BitsAndBytesConfig(
                     load_in_4bit=True,
                     bnb_4bit_quant_type="nf4",
