@@ -80,6 +80,7 @@ class OurArguments(TrainingArguments):
     ## - forward_grad: forward gradient
     ## (add) -zo_sgd_svd 
     ## (add) -lozo_sgd: low rank zo sgd
+    ## (our) -new_sgd: new zo sgd
     
     optimizer: str = "adamw"
     ## options
@@ -98,8 +99,8 @@ class OurArguments(TrainingArguments):
 
     update_interval: int = 2000
     gauss_rank: int = 8
-    step_interval: int = 50 # lozo
-    rank_r: int = 2 # lozo
+    # step_interval: int = 50 # in lozo
+    # rank_r: int = 2 # in lozo
 
     
     # Prefix tuning

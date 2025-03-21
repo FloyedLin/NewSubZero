@@ -329,6 +329,9 @@ class OurTrainer(Trainer):
             # self.optimizer = {name: SGD([param], lr=args.learning_rate) for name, param in self.model.named_parameters()}
             # print(f"### args.lr_scheduler: {args.lr_scheduler_type}")
             assert args.lr_scheduler_type == 'constant', "we did not implement lr_schedule."    
+        elif args.trainer == "new_sgd":
+            self.optimizer = SGD(self.model.parameters(), lr=args.learning_rate, momentum=args.momentum)
+            assert args.lr_scheduler_type == 'constant', "we did not implement lr_schedule."    
         elif args.trainer == "lozo_sgd":
             self.optimizer = SGD(self.model.parameters(), lr=args.learning_rate, momentum=args.momentum)
         else:
@@ -496,9 +499,15 @@ class OurTrainer(Trainer):
                     else:
                         raise ValueError(f"q={args.q} is not supported.")
                 elif args.trainer in ["subzero_sgd"]:
-                        
+
                     if args.q == 1:
                         tr_loss_step = self.zo_subspace_step(model, inputs)            
+                    else:
+                        raise ValueError(f"q={args.q} is not supported.")
+                elif args.trainer in ["new_sgd"]:  
+
+                    if args.q == 1:
+                        tr_loss_step = self.new_zo_subspace_step(model, inputs)            
                     else:
                         raise ValueError(f"q={args.q} is not supported.")
                 elif args.trainer in ["lozo_sgd"]:
@@ -508,6 +517,7 @@ class OurTrainer(Trainer):
                     else:
                         raise ValueError(f"q={args.q} is not supported.")
                 elif args.trainer == "forward_grad":
+
                     tr_loss_step = self.forward_grad_step(model, inputs)
                 else:
                         
@@ -551,10 +561,12 @@ class OurTrainer(Trainer):
                         self.zo_update(model)
                     elif args.trainer == "subzero_sgd":
                         self.zo_subspace_update(model)
+                    elif args.trainer == "new_sgd":
+                        self.new_zo_subspace_update(model)
                     elif args.trainer == "forward_grad":
                         self.forward_grad_update(model)
                     elif args.trainer == "lozo_sgd":
-                        self.lozo_update(model)
+                        self.lozo_update()
                     else:
                         self.gradient_update(model)
                     
@@ -753,8 +765,26 @@ class OurTrainer(Trainer):
             
             param.data = param.data + scaling_factor * z * self.args.zo_eps
 
-   
     def zo_subspace_perturb_parameters(self, random_seed=None, scaling_factor=1):
+             
+        # Set the random seed to ensure that we sample the same z for perturbation/update
+        torch.manual_seed(random_seed if random_seed is not None else self.zo_random_seed)
+        
+        for _, param, U, V in self.named_parameters_to_optim:
+            if len(U.shape) == 1:
+                
+                z = torch.normal(mean=0, std=1, size=param.data.size(), device=param.data.device, dtype=param.data.dtype)    
+                param.data = param.data + scaling_factor * z * self.args.zo_eps
+                
+            elif len(U.shape) == 2:
+  
+                z = torch.normal(mean=0, std=1, size=(U.shape[1], V.shape[0]), device=param.data.device, dtype=param.data.dtype)
+                z = (U @ z @ V * math.sqrt(param.data.numel() / z.numel())).view(param.data.shape)
+                
+                # param.data = param.data + U @ (scaling_factor * z * self.args.zo_eps * math.sqrt(param.data.numel() / z.numel())) @ V
+                param.data = param.data + scaling_factor * z * self.args.zo_eps 
+   
+    def new_zo_subspace_perturb_parameters(self, random_seed=None, scaling_factor=1):
              
         # Set the random seed to ensure that we sample the same z for perturbation/update
         torch.manual_seed(random_seed if random_seed is not None else self.zo_random_seed)
@@ -941,9 +971,90 @@ class OurTrainer(Trainer):
 
         return loss1
 
-
     @torch.no_grad()
     def zo_subspace_step(self, model, inputs):
+        """
+        Estimate gradient by subzero. Return the loss from f(theta + z)
+        """
+        args = self.args
+                
+        # What parameters to optimize
+        self.named_parameters_to_optim = []
+        for name, param in model.named_parameters():
+            if param.requires_grad:
+
+                if len(torch.squeeze(param.data).shape) == 2:
+                    if self.state.global_step == 0:
+   
+                        self.p_state[name] = {'U': torch.zeros(param.data.size(0), args.gauss_rank), 
+                                                'V': torch.zeros(args.gauss_rank, param.data.size(1))}
+                  
+                    p_state = self.p_state[name]          
+                        
+                    if self.state.global_step % args.update_interval == 0:
+                            # print(args.mode)
+                        if args.mode in ['lora', 'prefix', 'prompt']:
+                            # print(args.mode)
+                            # print(param.data.shape)
+                            # w_shape = reshape_matrix(param.data.numel())
+                            w_shape = param.data.shape
+                            print(w_shape)
+                            # U, V = fast_svd_method_v2(w_shape=w_shape, device=param.device, dtype=param.data.dtype, rank=args.gauss_rank)
+                            U, V = get_orthogonal_matrix(weights=param, rank=args.gauss_rank)
+                        else:
+                            # U, V = fast_svd_method_v2(w_shape=param.data.shape, device=param.device, dtype=param.data.dtype, rank=args.gauss_rank)
+                            U, V = get_orthogonal_matrix(weights=param, rank=args.gauss_rank)
+
+                        p_state['U'] = U
+                        p_state['V'] = V
+                        
+                    U = p_state['U']
+                    V = p_state['V']  
+                    
+                    self.named_parameters_to_optim.append((name, param, U, V))
+                else:
+                    self.named_parameters_to_optim.append((name, param, torch.Tensor([1.]), torch.Tensor([1.])))
+                    # # TODO avoid init the memory for grad.
+                    # param.grad = torch.zeros_like(param.data)
+                    # param.grad = None  # Make sure the grad is empty and will not be updated.
+                # # TODO avoid init the memory for grad.
+                # param.grad = torch.zeros_like(param.data)
+                param.grad = None  # Make sure the grad is empty and will not be updated.
+
+        # Sample the random seed for sampling z
+        # torch.cuda.empty_cache()
+        self.zo_random_seed = np.random.randint(1000000000)
+
+        # First function evaluation
+        self.zo_subspace_perturb_parameters(scaling_factor=1)
+        loss1 = self.zo_forward(model, inputs)
+
+        # Second function evaluation
+        assert args.q == 1, "only support q=1 for the memory efficiency. If you want to implement q>1, need to store random seeds to save memory. In addition, we need to set different random seed for different z in the q-loop."
+        for _ in range(args.q):  # TODO shall we change the seed?
+            if self.args.perturbation_mode == "one_side":
+                self.zo_subspace_perturb_parameters(scaling_factor=-1)
+                loss2 = self.zo_forward(model, inputs)
+                self.projected_grad = ((loss1 - loss2) / self.args.zo_eps).item()
+            else:  # two side perturbation
+                self.zo_subspace_perturb_parameters(scaling_factor=-2)
+                loss2 = self.zo_forward(model, inputs)
+                self.projected_grad = ((loss1 - loss2) / (2 * self.args.zo_eps)).item()
+
+                # Reset model back to its parameters at start of step
+                self.zo_subspace_perturb_parameters(scaling_factor=1)
+
+
+        # for name, param in self.named_parameters_to_optim:
+        #     param.grad = param.grad / args.q
+
+        # No gradient accumulation support
+        assert self.args.gradient_accumulation_steps == 1
+
+        return loss1
+
+    @torch.no_grad()
+    def new_zo_subspace_step(self, model, inputs):
         """
         Estimate gradient by subzero. Return the loss from f(theta + z)
         """
@@ -1040,23 +1151,23 @@ class OurTrainer(Trainer):
                     #     print("param", name, "dequantize the weight to 4-bit: ", param.data)
 
         # First function evaluation
-        self.zo_subspace_perturb_parameters(scaling_factor=1)
+        self.new_zo_subspace_perturb_parameters(scaling_factor=1)
         loss1 = self.zo_forward(model, inputs)
 
         # Second function evaluation
         assert args.q == 1, "only support q=1 for the memory efficiency. If you want to implement q>1, need to store random seeds to save memory. In addition, we need to set different random seed for different z in the q-loop."
         for _ in range(args.q):  # TODO shall we change the seed?
             if self.args.perturbation_mode == "one_side":
-                self.zo_subspace_perturb_parameters(scaling_factor=-1)
+                self.new_zo_subspace_perturb_parameters(scaling_factor=-1)
                 loss2 = self.zo_forward(model, inputs)
                 self.projected_grad = ((loss1 - loss2) / self.args.zo_eps).item()
             else:  # two side perturbation
-                self.zo_subspace_perturb_parameters(scaling_factor=-2)
+                self.new_zo_subspace_perturb_parameters(scaling_factor=-2)
                 loss2 = self.zo_forward(model, inputs)
                 self.projected_grad = ((loss1 - loss2) / (2 * self.args.zo_eps)).item()
 
                 # Reset model back to its parameters at start of step
-                self.zo_subspace_perturb_parameters(scaling_factor=1)
+                self.new_zo_subspace_perturb_parameters(scaling_factor=1)
 
         if args.quantization:
             # print("after zo subspace step, loss1 is: ", loss1)
@@ -1104,6 +1215,36 @@ class OurTrainer(Trainer):
         # model.zero_grad()
 
     def zo_subspace_update(self, model):
+        
+        args = self.args
+        # Set the random seed to ensure that we sample the same z for perturbation/update
+        torch.manual_seed(self.zo_random_seed)
+        for name, param, U, V in self.named_parameters_to_optim:
+            # Resample z
+            if len(torch.squeeze(param.data).shape) == 2:    
+                z0 = torch.normal(mean=0, std=1, size=(args.gauss_rank, args.gauss_rank), device=param.data.device, dtype=param.data.dtype)
+                # z = U @ z0 @ V * math.sqrt(param.data.numel() / z0.numel())
+                z = (U @ z0 @ V * math.sqrt(param.data.numel() / z0.numel())).view(param.data.shape).to(param.data.dtype)
+
+            else:
+                z = torch.normal(mean=0, std=1, size=param.data.size(), device=param.data.device,
+                             dtype=param.data.dtype)
+
+            param.grad = self.projected_grad * z  # NOTE this q division does not work for q>1.
+            self.optimizer.step()  # will only update grad that is not None.
+            # param.data = param.data - graddiff_times_z / args.q  # NOTE this q division does not work for q>1.
+            param.grad = None  # avoid further update.
+            
+        self.update_steps += 1
+        if self.update_steps % 1000 == 0:
+            print('model update', self.update_steps)
+        # self.optimizer.step()
+        # print(type(self.optimizer), self.optimizer)
+        self.lr_scheduler.step()  # NOTE When we use own optimizer, this will no longer update the lr anymore.
+        # self.optimizer.zero_grad()
+        # model.zero_grad()
+
+    def new_zo_subspace_update(self, model):
 
         args = self.args
         # Set the random seed to ensure that we sample the same z for perturbation/update
@@ -1169,12 +1310,12 @@ class OurTrainer(Trainer):
         
         for name, param in self.named_parameters_to_optim:
             if param.data.ndim >= 2:
-                if step % args.step_interval == 0:
-                    v = torch.randn(param.data.size(1), args.rank_r, device=param.data.device, dtype=param.data.dtype)
+                if step % args.update_interval == 0:
+                    v = torch.randn(param.data.size(1), args.gauss_rank, device=param.data.device, dtype=param.data.dtype)
                     self.v[name] = v
                 else:
                     v = self.v[name]
-                u = self.random_gaussian_matrix(m=param.data.size(0), n=args.rank_r, device=param.data.device, dtype=param.data.dtype)
+                u = self.random_gaussian_matrix(m=param.data.size(0), n=args.gauss_rank, device=param.data.device, dtype=param.data.dtype)
                 param.data = param.data + scaling_factor * (u@v.t()) * self.args.zo_eps
             else:
                 z = torch.normal(mean=0, std=1, size=param.data.size(), device=param.data.device, dtype=param.data.dtype)
@@ -1227,7 +1368,7 @@ class OurTrainer(Trainer):
         for name, param in self.named_parameters_to_optim:
             if param.data.ndim >= 2:
                 v = self.v[name]
-                u = self.random_gaussian_matrix(m=param.data.size(0), n=args.rank_r, device=param.data.device, dtype=param.data.dtype)
+                u = self.random_gaussian_matrix(m=param.data.size(0), n=args.gauss_rank, device=param.data.device, dtype=param.data.dtype)
 
                 if "bias" not in name and "layer_norm" not in name and "layernorm" not in name:
                     param.data = param.data - self._get_learning_rate() * (self.projected_grad * (u@v.t()) + args.weight_decay * param.data)
