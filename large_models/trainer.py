@@ -17,6 +17,7 @@ The Trainer class, to easily train a 🤗 Transformers from scratch or finetune 
 """
 
 import bitsandbytes as bnb
+from Hessian_smooth_scheduler import Hessian_smooth_scheduler
 
 import inspect
 import math
@@ -334,6 +335,10 @@ class OurTrainer(Trainer):
             assert args.lr_scheduler_type == 'constant', "we did not implement lr_schedule."    
         elif args.trainer == "lozo_sgd":
             self.optimizer = SGD(self.model.parameters(), lr=args.learning_rate, momentum=args.momentum)
+            assert args.lr_scheduler_type == 'constant', "we did not implement lr_schedule."
+        elif args.trainer == "hizoo_sgd":
+            self.optimizer = SGD(self.model.parameters(), lr=args.learning_rate, momentum=args.momentum)
+            assert args.lr_scheduler_type == 'constant', "we did not implement lr_schedule."
         else:
             assert args.lr_scheduler_type == 'constant', "we did not implement lr_schedule."
             if args.optimizer == "adam":
@@ -437,8 +442,20 @@ class OurTrainer(Trainer):
 
         # Main training loop
         total_steps = -1
-        
+
+        # Initialize Hessian_matrix for HIZOO
+        if args.trainer == "hizoo_sgd":
+            self.Hessian_matrix = {}
+            for name, param in model.named_parameters():
+                if param.requires_grad:
+                    self.Hessian_matrix[name] = torch.ones(size=param.data.size(), device=param.data.device, dtype=param.data.dtype)
+
         for epoch in range(epochs_trained, num_train_epochs):
+
+            # Update Hessian_smooth for HIZOO
+            if args.trainer == "hizoo_sgd":
+                self.Hessian_smooth = Hessian_smooth_scheduler(args.hessian_smooth_type, self.state.global_step, int(num_train_epochs))
+
             epoch_start_time = time.time()
             print(f"-------------------------- Training Epoch {epoch} --------------------------")
             if isinstance(train_dataloader, DataLoader) and isinstance(train_dataloader.sampler, DistributedSampler):
@@ -516,6 +533,12 @@ class OurTrainer(Trainer):
                         tr_loss_step = self.lozo_step(model, inputs)            
                     else:
                         raise ValueError(f"q={args.q} is not supported.")
+                elif args.trainer in ["hizoo_sgd"]:
+
+                    if args.q == 1:
+                        tr_loss_step = self.hizoo_step(model, inputs)            
+                    else:
+                        raise ValueError(f"q={args.q} is not supported.")
                 elif args.trainer == "forward_grad":
 
                     tr_loss_step = self.forward_grad_step(model, inputs)
@@ -567,6 +590,8 @@ class OurTrainer(Trainer):
                         self.forward_grad_update(model)
                     elif args.trainer == "lozo_sgd":
                         self.lozo_update()
+                    elif args.trainer == "hizoo_sgd":
+                        self.hizoo_update()
                     else:
                         self.gradient_update(model)
                     
@@ -1321,7 +1346,7 @@ class OurTrainer(Trainer):
                 z = torch.normal(mean=0, std=1, size=param.data.size(), device=param.data.device, dtype=param.data.dtype)
                 param.data = param.data + scaling_factor * z * self.args.zo_eps
 
-
+    @torch.no_grad()
     def lozo_step(self, model, inputs):
         """
         Estimate gradient by Lowrank-zo. Return the loss from f(theta + uv^t)
@@ -1382,7 +1407,7 @@ class OurTrainer(Trainer):
                 else:
                     param.data = param.data - self._get_learning_rate() * (self.projected_grad * z)
 
-        self.lr_scheduler.step()
+        self.lr_scheduler.step() # no longer update the lr anymore.
         
     def random_gaussian_matrix(self, m, n, device, dtype, random_seed=None):
         if random_seed is not None:
@@ -1391,6 +1416,69 @@ class OurTrainer(Trainer):
         random_matrix = torch.randn(m, n, device=device, dtype=dtype)
         return random_matrix
 
+    # HIZOO
+    
+    def hizoo_perturb_parameters(self, random_seed=None, Hessian_matrix=None, scaling_factor=1):
+
+        torch.manual_seed(random_seed if random_seed is not None else self.zo_random_seed)
+
+        for name, param in self.named_parameters_to_optim:
+
+            z = torch.normal(mean=0, std=1, size=param.data.size(), device=param.data.device, dtype=param.data.dtype)
+            param.data = param.data + scaling_factor / torch.sqrt(Hessian_matrix[name]) * z * self.args.zo_eps
+
+    @torch.no_grad()
+    def hizoo_step(self, model, inputs, num_train_epochs):
+        """
+        Estimate gradient by Hessian-zo. Return the loss from f(theta + z)
+        """
+        args = self.args
+
+        self.named_parameters_to_optim = []
+        for name, param in model.named_parameters():
+            if param.requires_grad:
+                self.named_parameters_to_optim.append((name, param))
+
+        # Sample the random seed for sampling z
+        self.zo_random_seed = np.random.randint(1000000000)
+
+        self.loss_original = self.zo_forward(model, inputs)
+
+        # First function evaluation
+        self.hizoo_perturb_parameters(self.Hessian_matrix, scaling_factor=1)
+        self.loss1 = self.zo_forward(model, inputs)
+
+        # Second function evaluation
+        self.hizoo_perturb_parameters(self.Hessian_matrix, scaling_factor=-2)
+        self.loss2 = self.zo_forward(model, inputs)
+
+        self.hizoo_perturb_parameters(self.Hessian_matrix, scaling_factor=1)
+
+        self.projected_grad = ((self.loss1 - self.loss2) / self.args.zo_eps).item()
+
+        # No gradient accumulation support
+        assert self.args.gradient_accumulation_steps == 1
+
+        return self.loss1
+    
+    def hizoo_update(self):
+
+        args = self.args
+        # Set the random seed to ensure that we sample the same z for perturbation/update
+        torch.manual_seed(self.zo_random_seed)
+        for name, param in self.named_parameters_to_optim:
+            z = torch.normal(mean=0, std=1, size=param.data.size(), device=param.data.device, dtype=param.data.dtype)
+
+            Hessian_temp = self.Hessian_matrix[name] * z * z
+            Hessian_estimator = (torch.abs(self.loss1 + self.loss2 - 2 * self.loss_original) * Hessian_temp * self.Hessian_smooth / (2 * self.args.zo_eps * self.args.zo_eps))
+            
+            self.Hessian_matrix[name] = ((1 - self.Hessian_smooth) * self.Hessian_matrix[name] +  Hessian_estimator)
+
+            grad = (self.loss1 - self.loss2) / (2 * self.args.zo_eps) * z / torch.sqrt(self.Hessian_matrix[name])
+            param.data = param.data - self._get_learning_rate * (grad + self.args.weight_decay * param.data)
+
+        self.lr_scheduler.step() # no longer update the lr anymore.
+            
 
     @staticmethod
     @torch.no_grad()

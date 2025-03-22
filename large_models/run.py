@@ -81,6 +81,7 @@ class OurArguments(TrainingArguments):
     ## (add) -zo_sgd_svd 
     ## (add) -lozo_sgd: low rank zo sgd
     ## (our) -new_sgd: new zo sgd
+    ## (add) -hizoo_sgd: new
     
     optimizer: str = "adamw"
     ## options
@@ -92,7 +93,7 @@ class OurArguments(TrainingArguments):
     momentum: float = 0.0  # only work for SGD optimizer
     lr_scheduler_type: str = "constant"  # only work for SGD optimizer
 
-    # MeZO and SubZero
+    # MeZO and SubZero and ...
     zo_eps: float = 1e-3  # eps in MeZO
     perturbation_mode: str = "two_side"
     q: int = 1  # number of Gaussian samples for zeroth-order trainers
@@ -102,6 +103,7 @@ class OurArguments(TrainingArguments):
     # step_interval: int = 50 # in lozo
     # rank_r: int = 2 # in lozo
 
+    hessian_smooth_type: str = 'constant0'
     
     # Prefix tuning
     prefix_tuning: bool = False  # whether to use prefix tuning
