@@ -536,7 +536,7 @@ class OurTrainer(Trainer):
                 elif args.trainer in ["hizoo_sgd"]:
 
                     if args.q == 1:
-                        tr_loss_step = self.hizoo_step(model, inputs)            
+                        tr_loss_step = self.hizoo_step(model, inputs, num_train_epochs)            
                     else:
                         raise ValueError(f"q={args.q} is not supported.")
                 elif args.trainer == "forward_grad":
