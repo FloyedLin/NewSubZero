@@ -1445,14 +1445,14 @@ class OurTrainer(Trainer):
         self.loss_original = self.zo_forward(model, inputs)
 
         # First function evaluation
-        self.hizoo_perturb_parameters(self.Hessian_matrix, scaling_factor=1)
+        self.hizoo_perturb_parameters(Hessian_matrix=self.Hessian_matrix, scaling_factor=1)
         self.loss1 = self.zo_forward(model, inputs)
 
         # Second function evaluation
-        self.hizoo_perturb_parameters(self.Hessian_matrix, scaling_factor=-2)
+        self.hizoo_perturb_parameters(Hessian_matrix=self.Hessian_matrix, scaling_factor=-2)
         self.loss2 = self.zo_forward(model, inputs)
 
-        self.hizoo_perturb_parameters(self.Hessian_matrix, scaling_factor=1)
+        self.hizoo_perturb_parameters(Hessian_matrix=self.Hessian_matrix, scaling_factor=1)
 
         self.projected_grad = ((self.loss1 - self.loss2) / self.args.zo_eps).item()
 
@@ -1470,7 +1470,7 @@ class OurTrainer(Trainer):
             z = torch.normal(mean=0, std=1, size=param.data.size(), device=param.data.device, dtype=param.data.dtype)
 
             Hessian_temp = self.Hessian_matrix[name] * z * z
-            Hessian_estimator = (torch.abs(self.loss1 + self.loss2 - 2 * self.loss_original) * Hessian_temp * self.Hessian_smooth / (2 * self.args.zo_eps * self.args.zo_eps))
+            Hessian_estimator = (torch.abs(self.loss1 + self.loss2 - 2 * self.loss_original) * Hessian_temp.to(param.data.device) * self.Hessian_smooth / (2 * self.args.zo_eps * self.args.zo_eps))
             
             self.Hessian_matrix[name] = ((1 - self.Hessian_smooth) * self.Hessian_matrix[name] +  Hessian_estimator)
 
