@@ -1021,15 +1021,12 @@ class OurTrainer(Trainer):
                         if args.mode in ['lora', 'prefix', 'prompt']:
                             # print(args.mode)
                             # print(param.data.shape)
-                            # w_shape = reshape_matrix(param.data.numel())
-                            w_shape = param.data.shape
+                            w_shape = reshape_matrix(param.data.numel())
                             print(w_shape)
-                            # U, V = fast_svd_method_v2(w_shape=w_shape, device=param.device, dtype=param.data.dtype, rank=args.gauss_rank)
-                            U, V = get_orthogonal_matrix(weights=param, rank=args.gauss_rank)
+                            U, V = fast_svd_method_v2(w_shape=w_shape, device=param.device, dtype=param.data.dtype, rank=args.gauss_rank)
                         else:
-                            # U, V = fast_svd_method_v2(w_shape=param.data.shape, device=param.device, dtype=param.data.dtype, rank=args.gauss_rank)
-                            U, V = get_orthogonal_matrix(weights=param, rank=args.gauss_rank)
-
+                            U, V = fast_svd_method_v2(w_shape=param.data.shape, device=param.device, dtype=param.data.dtype, rank=args.gauss_rank)
+                      
                         p_state['U'] = U
                         p_state['V'] = V
                         
