@@ -450,6 +450,11 @@ class OurTrainer(Trainer):
                 if param.requires_grad:
                     self.Hessian_matrix[name] = torch.ones(size=param.data.size(), device=param.data.device, dtype=param.data.dtype)
 
+        # 增加
+        import csv
+        import os
+        csv_file = args.trainer + "gradient_log.csv"
+
         for epoch in range(epochs_trained, num_train_epochs):
 
             # Update Hessian_smooth for HIZOO
@@ -555,6 +560,17 @@ class OurTrainer(Trainer):
                     else:
                         tr_loss_step = self.training_step(model, inputs)
     
+                grad_row = [total_steps]
+                for name, param in model.named_parameters():
+                    if param.requires_grad:
+                        if "attention" in name and "q" in name:
+                            grad_norm = param.grad.data.norm(2).item()
+                            grad_row.append(grad_norm)
+
+                with open(csv_file, mode="a", newline="") as f:
+                    writer = csv.writer(f)
+                    writer.writerow(grad_row)
+
                 if (
                         args.logging_nan_inf_filter
                         and not is_torch_tpu_available()
@@ -1126,7 +1142,7 @@ class OurTrainer(Trainer):
                                         dtype=param.data.dtype)
 
                         param.grad = self.projected_grad * z              
-
+                        
                         if args.mode in ['lora', 'prefix', 'prompt']:
                             # print(args.mode)
                             # print(param.data.shape)
@@ -1190,17 +1206,6 @@ class OurTrainer(Trainer):
 
                 # Reset model back to its parameters at start of step
                 self.new_zo_subspace_perturb_parameters(scaling_factor=1)
-
-        if args.quantization:
-            # print("after zo subspace step, loss1 is: ", loss1)
-            # print("after zo subspace step, loss2 is: ", loss2)
-            # print("after zo subspace step, project grad is: ", self.projected_grad)
-            pass
-        
-        if args.quantization:
-            for name, param in model.named_parameters():
-                if param.requires_grad:
-                    _, param.quant_state =  bnb.functional.quantize_nf4(param.data, out=param.data)
 
         # for name, param in self.named_parameters_to_optim:
         #     param.grad = param.grad / args.q
